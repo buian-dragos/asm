@@ -1,0 +1,69 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit               ; tell nasm that exit exists even if we won't be defining it
+     8                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+     9                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    10                                  
+    11                                  ; our data is declared here (the variables needed by our program)
+    12                                  segment data use32 class=data
+    13                                      ; A- byte, B- word, C- doubleword
+    14 00000000 D6                          A db 11010110b
+    15 00000001 2896                        B dw 1001011000101000b
+    16 00000003 <res 00000004>              C resd 1
+    17                                      
+    18                                  ; our code starts here
+    19                                  segment code use32 class=code
+    20                                      start:
+    21                                          ; (1) the bits 24-31 of C are the same as the bits of A
+    22                                          ; (2)the bits 16-23 of C are the invert of the bits of the lowest byte of B
+    23                                          ; (3)the bits 10-15 of C have the value 1
+    24                                          ; (4)the bits 2-9 of C are the same as the bits of the highest byte of B
+    25                                          ; (5)the bits 0-1 both contain the value of the sign bit of A
+    26                                          
+    27                                          ;(1)
+    28 00000000 B800000000                      mov EAX,0
+    29 00000005 A0[00000000]                    mov AL,[A]  ;EAX=0000 0000 0000 0000 0000 0000 1101 0110b
+    30 0000000A B108                            mov CL,8
+    31 0000000C D3C0                            rol EAX,cl  ;EAX=0000 0000 0000 0000 1101 0110 0000 0000b ;we move (1) so we can have space for (2)
+    32                                          
+    33                                          ;(2)
+    34 0000000E 668B1D[01000000]                mov BX,[B]  ;BX=B
+    35 00000015 80F3FF                          xor BL,11111111b    ;inverts the lowest byte of B
+    36 00000018 88D8                            mov AL,BL   ;EAX=0000 0000 0000 0000 1101 0110 1101 0111b
+    37                                          
+    38                                          
+    39                                          ;(3)
+    40 0000001A B106                            mov CL,6    
+    41 0000001C D3C0                            rol EAX,CL      ;EAX=0000 0000 0011 0101 1011 0101 1100 0000b
+    42 0000001E 0C3F                            or AL,00111111b ;EAX=0000 0000 0011 0101 1011 0101 1111 1111b
+    43                                          
+    44                                          ;(4)
+    45 00000020 B108                            mov CL,8                    
+    46 00000022 D3C0                            rol EAX,CL ;EAX=0011 0101 1011 0101 1111 1111 0000 0000b
+    47 00000024 08F8                            or AL,BH   ;EAX=0011 0101 1011 0101 1111 1111 1001 0110b
+    48                                          
+    49                                          ;(5)
+    50 00000026 B101                            mov CL,1
+    51 00000028 8A15[00000000]                  mov DL,[A]
+    52 0000002E D2D2                            rcl DL,CL   ;the sign bit of A will be moved to the right and will be saved in CF
+    53 00000030 B200                            mov DL,0    ;we need to change the last 2 bits of DL to the sign of A, we do this by addig the CF to DL twice
+    54 00000032 80D200                          adc DL,0    ;DL=0000 0001  
+    55 00000035 88D3                            mov BL,DL
+    56 00000037 D2C2                            rol DL,CL   
+    57 00000039 00DA                            add DL,BL   ;DL=0000 0011
+    58                                          
+    59 0000003B B102                            mov CL,2                   
+    60 0000003D D3C0                            rol EAX,CL  ;EAX=1101 0110 1101 0111 1111 1110 0101 1000b
+    61 0000003F 08D0                            or AL,DL    ;EAX=1101 0110 1101 0111 1111 1110 0101 1011b - the last 2 digits become the sign of A
+    62                                          
+    63                                          
+    64                                          
+    65 00000041 A3[03000000]                    mov [C],EAX
+    66                                          
+    67                                      
+    68                                          ; exit(0)
+    69 00000046 6A00                            push    dword 0      ; push the parameter for exit onto the stack

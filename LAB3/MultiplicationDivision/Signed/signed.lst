@@ -1,0 +1,54 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  ;a-(7+x)/(b*b-c/d+2); a-doubleword; b,c,d-byte; x-qword
+     3                                  
+     4                                  
+     5                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     6                                  global start        
+     7                                  
+     8                                  ; declare external functions needed by our program
+     9                                  extern exit               ; tell nasm that exit exists even if we won't be defining it
+    10                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+    11                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    12                                  
+    13                                  ; our data is declared here (the variables needed by our program)
+    14                                  segment data use32 class=data
+    15                                      ; signed
+    16 00000000 6E000000                    a dd 110
+    17 00000004 07                          b db 7
+    18 00000005 0F                          c db 15
+    19 00000006 05                          d db 5
+    20 00000007 5900000000000000            x dq 89 
+    21                                  
+    22                                  ; our code starts here
+    23                                  segment code use32 class=code
+    24                                      start:
+    25                                          ; a-(7+x)/(b*b-c/d+2) 110-(7+89)/(49-15/5+2)=110-96/48=108
+    26 00000000 A0[04000000]                    mov AL,[b]
+    27 00000005 F62D[04000000]                  IMUL byte [b] ;AX=b*b
+    28 0000000B 6689C3                          mov BX,AX ;BX=b*b
+    29 0000000E A0[05000000]                    mov AL,[c]
+    30 00000013 6698                            cbw ;AX=[c]
+    31 00000015 F63D[06000000]                  IDIV byte [d] ;AX=c/d AL<-quotinent
+    32 0000001B 6698                            cbw
+    33 0000001D 6629C3                          sub BX,AX ;BX=b*b-c/d
+    34 00000020 6683C302                        add BX,2 ;BX=b*b-c/d+2
+    35 00000024 6689D8                          mov AX,BX
+    36 00000027 98                              cwde
+    37 00000028 89C3                            mov EBX,EAX ;EBX=BX
+    38 0000002A A1[07000000]                    mov EAX,[x]
+    39 0000002F 8B15[0B000000]                  mov EDX,[x+4] ;EDX:EAX=x
+    40 00000035 83C007                          add EAX,7
+    41 00000038 83D200                          adc EDX,0 ;EDX:EAX=x+7
+    42 0000003B F7FB                            IDIV EBX ;EDX:EAX=(x+7)/(b*b-c/d) EAX<-quotinent
+    43 0000003D 89C3                            mov EBX,EAX
+    44 0000003F A0[00000000]                    mov AL,[a]
+    45 00000044 6698                            cbw
+    46 00000046 98                              cwde ;EAX=a
+    47 00000047 29D8                            sub EAX,EBX ;EAX=a-(7+x)/(b*b-c/d+2)
+    48                                          ;FINAL result is stored in EAX
+    49                                          
+    50                                          
+    51                                      
+    52                                          ; exit(0)
+    53 00000049 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    54 0000004B FF15[00000000]                  call    [exit]       ; call exit to terminate the program

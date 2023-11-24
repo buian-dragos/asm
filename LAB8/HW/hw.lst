@@ -1,0 +1,93 @@
+     1                                  ;Being given a string of doublewords, build another string of doublewords which will include only the doublewords from the given string which have an even number of bits with the value 1.
+     2                                  
+     3                                  bits 32 ; assembling for the 32 bits architecture
+     4                                  
+     5                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     6                                  global start        
+     7                                  
+     8                                  ; declare external functions needed by our program
+     9                                  extern exit, printf       ; tell nasm that exit exists even if we won't be defining it
+    10                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+    11                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    12                                  import printf msvcrt.dll
+    13                                                            
+    14                                                            
+    15                                  ; our data is declared here (the variables needed by our program)
+    16                                  segment data use32 class=data
+    17                                      ; ...
+    18 00000000 EF930662B94E742D9C-         s1 dd 01100010000001101001001111101111b,00101101011101000100111010111001b,01110110100010011110100010011100b
+    18 00000009 E88976             
+    19                                      ;        620693EFh     da 16                2D744EB9h       nu  17          7689E89C                 da 16
+    20                                      len equ ($-s1)/4 ;length of s1
+    21 0000000C <res 0000000C>              s2 resd len
+    22 00000018 00                          ct db 0
+    23                                      
+    24 00000019 00000000                    k dd 0
+    25 0000001D 54686520646F75626C-         message db "The doublewords with an even number of bits with value 1 are: ",0
+    25 00000026 65776F726473207769-
+    25 0000002F 746820616E20657665-
+    25 00000038 6E206E756D62657220-
+    25 00000041 6F6620626974732077-
+    25 0000004A 6974682076616C7565-
+    25 00000053 2031206172653A2000 
+    26 0000005C 25782000                    format db "%x ",0
+    27 00000060 20256400                    testFormat db " %d",0
+    28                                      
+    29                                  ; our code starts here
+    30                                  segment code use32 class=code
+    31                                      start:
+    32                                          ; Being given a string of doublewords, build another string of doublewords which will include only the doublewords from the given string which have an even number of bits with the value 1.
+    33 00000000 B903000000                      mov ecx,len
+    34 00000005 E34C                            jecxz skipLoop
+    35 00000007 BE[00000000]                    mov esi,s1
+    36 0000000C BF[0C000000]                    mov edi,s2
+    37 00000011 FC                              cld
+    38                                          loop1:                      ;loop1 goes the string of doublewords
+    39 00000012 C605[18000000]00                    mov byte [ct],0
+    40 00000019 B800000000                          mov eax,0
+    41 0000001E AD                                  lodsd                   ;we load the current dword into eax
+    42                                             
+    43 0000001F 89CB                                mov ebx,ecx
+    44 00000021 B920000000                          mov ecx,32
+    45                                              
+    46                                              loop2:                  ;loop2 is used for counting the number of bits with value 1 of each dword
+    47 00000026 D1C0                                    rol eax,1
+    48 00000028 8015[18000000]00                        adc byte [ct],0     ;add 1 into [ct] if the but that was rolled to the left was 1
+    49 0000002F E2F5                                loop loop2
+    50                                              
+    51 00000031 89C2                                mov edx,eax             ;we save the current dword into edx
+    52 00000033 B800000000                          mov eax,0
+    53 00000038 A0[18000000]                        mov al,[ct]
+    54 0000003D B102                                mov cl,2
+    55 0000003F F6F1                                div cl
+    56 00000041 80FC00                              cmp ah,0                ;we check if the current dword has an even number of bits with value 1
+    57 00000044 7509                                jnz doNotAdd
+    58 00000046 89D0                                    mov eax,edx
+    59 00000048 AB                                      stosd               ;we add the dword in the second string
+    60 00000049 FF05[19000000]                          inc dword [k]
+    61                                              doNotAdd:
+    62                                              
+    63 0000004F 89D9                                mov ecx,ebx
+    64 00000051 E2BF                            loop loop1
+    65                                          skipLoop: 
+    66                                          
+    67                                          ;printf("The doublewords with an even number of bits with value 1 are %x);
+    68 00000053 68[1D000000]                    push dword message
+    69 00000058 FF15[00000000]                  call [printf]
+    70 0000005E 83C404                          add esp,4*1
+    71                                    
+    72 00000061 8B0D[19000000]                  mov ecx,[k]
+    73 00000067 BE00000000                      mov esi,0
+    74                                          printLoop:
+    75 0000006C 89CB                                mov ebx,ecx
+    76 0000006E FFB6[0C000000]                      push dword [s2+esi]
+    77 00000074 68[5C000000]                        push dword format
+    78 00000079 FF15[00000000]                      call [printf]
+    79 0000007F 83C408                              add esp,4*2
+    80 00000082 89D9                                mov ecx,ebx
+    81 00000084 83C604                              add esi,4
+    82 00000087 E2E3                            loop printLoop
+    83                                          
+    84                                          ; exit(0)
+    85 00000089 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    86 0000008B FF15[00000000]                  call    [exit]       ; call exit to terminate the program

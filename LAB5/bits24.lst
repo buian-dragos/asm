@@ -1,0 +1,46 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit               ; tell nasm that exit exists even if we won't be defining it
+     8                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+     9                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    10                                  
+    11                                  ; our data is declared here (the variables needed by our program)
+    12                                  segment data use32 class=data
+    13                                      ; M,MNew - doubleword
+    14 00000000 5BFED7D6                    M dd 11010110110101111111111001011011b
+    15 00000004 <res 00000004>              MNew resd 1
+    16                                  
+    17                                  ; our code starts here
+    18                                  segment code use32 class=code
+    19                                      start:
+    20                                          ; the bits 0-3 a of MNew are the same as the bits 5-8 a of M
+    21                                          ; the bits 4-7 a of MNew have the value 1
+    22                                          ; the bits 27-31 a of MNew have the value 0
+    23                                          ; the bits 8-26 of MNew are the same as the bits 8-26 a of M
+    24 00000000 B800000000                      mov EAX,0
+    25 00000005 8B1D[00000000]                  mov EBX,[M]
+    26 0000000B 6681E3E001                      and BX,0000000111100000b    ;adds the bits 5-8 of M into BX
+    27 00000010 B105                            mov CL,5
+    28 00000012 66D3CB                          ror BX,CL   ;the last 4 bits of BX are bits 5-8 of M
+    29 00000015 88D8                            mov AL,BL   ;the last 4 bits of EAX are bits 5-8 of M
+    30                                          
+    31 00000017 0CF0                            or AL,11110000b ;bits 4-7 of EAX are 1
+    32                                          
+    33                                          ;because we moved 0 into EAX, bits 27-31 are already 0
+    34                                  
+    35 00000019 8B1D[00000000]                  mov EBX,[M]
+    36 0000001F 81E300FFFF0F                    and EBX,00001111111111111111111100000000b   ;adds into EAX the bits 8-26 of M
+    37 00000025 09D8                            or EAX,EBX ;EAX has the final result - 00000110110101111111111011110010b - 6D7FEF2h
+    38                                          
+    39 00000027 A3[04000000]                    mov [MNew],EAX
+    40                                          
+    41                                          
+    42                                          
+    43                                          
+    44                                          ; exit(0)
+    45 0000002C 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    46 0000002E FF15[00000000]                  call    [exit]       ; call exit to terminate the program

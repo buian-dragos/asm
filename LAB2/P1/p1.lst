@@ -1,0 +1,38 @@
+     1                                  ;(10*a-5*b)+(d-5*c) a,b,c - byte, d - word
+     2                                  
+     3                                  bits 32 ; assembling for the 32 bits architecture
+     4                                  
+     5                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     6                                  global start        
+     7                                  
+     8                                  ; declare external functions needed by our program
+     9                                  extern exit               ; tell nasm that exit exists even if we won't be defining it
+    10                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+    11                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    12                                  
+    13                                  ; our data is declared here (the variables needed by our program)
+    14                                  segment data use32 class=data
+    15                                      ; ...
+    16 00000000 0A                          a db 10
+    17 00000001 07                          b db 7
+    18 00000002 14                          c db 20
+    19 00000003 2C01                        d dw 300
+    20                                  ; our code starts here
+    21                                  segment code use32 class=code
+    22                                      start:
+    23                                          ; (10*a-5*b)+(d-5*c)   (100-35)+(300-100)=265
+    24 00000000 B00A                            mov AL,10
+    25 00000002 F625[00000000]                  mul byte [a] ;AX=10*a
+    26 00000008 6689C3                          mov BX,AX   ;BX=10*a
+    27 0000000B B005                            mov AL,5
+    28 0000000D F625[01000000]                  mul byte [b] ;AX=5*b
+    29 00000013 6629C3                          sub BX,AX ;BX=10*a-5*b
+    30 00000016 B005                            mov AL,5
+    31 00000018 F625[02000000]                  mul byte [c] ;AX=5*c
+    32 0000001E 662905[03000000]                sub [d],AX  ;d=d-5*c
+    33 00000025 66031D[03000000]                add BX,[d]  ;BX=(10*a-5*b)+(d-5*c)
+    34                                          ;FINAL RESULT is stored in BX
+    35                                          
+    36                                          ; exit(0)
+    37 0000002C 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    38 0000002E FF15[00000000]                  call    [exit]       ; call exit to terminate the program

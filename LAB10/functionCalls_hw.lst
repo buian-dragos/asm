@@ -1,0 +1,100 @@
+     1                                  ;Two numbers a and b are given. Compute the expression value: (a/b)*k, where k is a constant value defined in data segment. Display the expression value (in base 2).
+     2                                  bits 32 ; assembling for the 32 bits architecture
+     3                                  
+     4                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     5                                  global start        
+     6                                  
+     7                                  ; declare external functions needed by our program
+     8                                  extern exit, scanf, printf; tell nasm that exit exists even if we won't be defining it
+     9                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+    10                                  import scanf msvcrt.dll   ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    11                                  import printf msvcrt.dll
+    12                                  
+    13                                  ; our data is declared here (the variables needed by our program)
+    14                                  segment data use32 class=data
+    15                                      ; ...
+    16 00000000 00000000                    a dd 0
+    17 00000004 00000000                    b dd 0
+    18 00000008 07000000                    k dd 7
+    19                                      
+    20 0000000C 00000000                    copy_edx dd 0
+    21 00000010 00000000                    copy_eax dd 0
+    22 00000014 00000000                    temp dd 0
+    23                                      
+    24 00000018 256400                      format db "%d", 0
+    25 0000001B 613D2000                    message_a db "a= ",0
+    26 0000001F 623D2000                    message_b db "b= ",0
+    27 00000023 526573756C743A2000          message db "Result: ",0
+    28 0000002C 6200                        binary db "b",0
+    29                                      
+    30                                  ; our code starts here
+    31                                  segment code use32 class=code
+    32                                      start:
+    33                                          ; Two numbers a and b are given. Compute the expression value: (a/b)*k, where k is a constant value defined in data segment. Display the expression value (in base 2).
+    34 00000000 68[1B000000]                    push dword message_a
+    35 00000005 FF15[00000000]                  call [printf]
+    36 0000000B 83C404                          add esp,4
+    37                                          
+    38 0000000E 68[00000000]                    push dword a
+    39 00000013 68[18000000]                    push dword format
+    40 00000018 FF15[00000000]                  call [scanf]        ;reading a
+    41 0000001E 83C408                          add esp,4*2
+    42                                          
+    43 00000021 68[1F000000]                    push dword message_b
+    44 00000026 FF15[00000000]                  call [printf]
+    45 0000002C 83C404                          add esp,4
+    46                                          
+    47 0000002F 68[04000000]                    push dword b
+    48 00000034 68[18000000]                    push dword format
+    49 00000039 FF15[00000000]                  call [scanf]        ;reading b
+    50 0000003F 83C408                          add esp,4*2
+    51                                          
+    52 00000042 BA00000000                      mov edx,0
+    53 00000047 A1[00000000]                    mov eax,[a]         ;(a/b)
+    54 0000004C F735[04000000]                  div dword [b]       ;remainder - edx, quotinent - eax
+    55                                          
+    56 00000052 BA00000000                      mov edx,0
+    57 00000057 F725[08000000]                  mul dword [k]       ;result is stored in edx:eax
+    58                                          
+    59 0000005D 8915[0C000000]                  mov [copy_edx],edx  ;registers edx and eax will be modified when functions are called
+    60 00000063 A3[10000000]                    mov [copy_eax],eax
+    61                                              
+    62 00000068 68[23000000]                    push dword message
+    63 0000006D FF15[00000000]                  call [printf]
+    64 00000073 83C404                          add esp,4
+    65                                          
+    66                                          
+    67                                          
+    68 00000076 B920000000                      mov ecx,32
+    69                                          printEDX:
+    70 0000007B D105[0C000000]                      rol dword [copy_edx],1
+    71 00000081 BB00000000                          mov ebx,0
+    72 00000086 83D300                              adc ebx,0
+    73 00000089 890D[14000000]                      mov [temp],ecx
+    74 0000008F 53                                  push ebx
+    75 00000090 68[18000000]                        push dword format
+    76 00000095 FF15[00000000]                      call [printf]
+    77 0000009B 83C408                              add esp,4*2
+    78 0000009E 8B0D[14000000]                      mov ecx,[temp]
+    79 000000A4 E2D5                            loop printEDX
+    80                                          
+    81 000000A6 B920000000                      mov ecx,32
+    82                                          printEAX:
+    83 000000AB D105[10000000]                      rol dword [copy_eax],1
+    84 000000B1 BB00000000                          mov ebx,0
+    85 000000B6 83D300                              adc ebx,0
+    86 000000B9 890D[14000000]                      mov [temp],ecx
+    87 000000BF 53                                  push ebx
+    88 000000C0 68[18000000]                        push dword format
+    89 000000C5 FF15[00000000]                      call [printf]
+    90 000000CB 83C408                              add esp,4*2
+    91 000000CE 8B0D[14000000]                      mov ecx,[temp]
+    92 000000D4 E2D5                            loop printEAX
+    93                                          
+    94 000000D6 68[2C000000]                    push dword binary
+    95 000000DB FF15[00000000]                  call [printf]
+    96 000000E1 83C404                          add esp,4
+    97                                          
+    98                                          ; exit(0)
+    99 000000E4 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+   100 000000E6 FF15[00000000]                  call    [exit]       ; call exit to terminate the program

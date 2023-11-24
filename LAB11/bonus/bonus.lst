@@ -1,0 +1,104 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit, fopen, fscanf, printf, fclose
+     8                                  import exit msvcrt.dll    
+     9                                  import fopen msvcrt.dll
+    10                                  import fscanf msvcrt.dll
+    11                                  import printf msvcrt.dll
+    12                                  import fclose msvcrt.dll
+    13                                  
+    14                                  ; our data is declared here (the variables needed by our program)
+    15                                  segment data use32 class=data
+    16                                      ; ...
+    17 00000000 00000000                    n dd 0
+    18 00000004 00000000                    num dd 0
+    19 00000008 00000000                    base_8 dd 0
+    20 0000000C 0000                        quo dw 0
+    21 0000000E 0000                        rem dw 0
+    22 00000010 0100                        p dw 1
+    23 00000012 00000000                    temp dd 0
+    24 00000016 0800                        eight dw 8
+    25 00000018 0A00                        ten dw 10
+    26                                      
+    27 0000001A 696E7075742E747874-         file_name db "input.txt",0
+    27 00000023 00                 
+    28 00000024 7200                        acces_mode db "r",0
+    29 00000026 00000000                    file_descriptor dd 0
+    30                                      
+    31 0000002A 256400                      format db "%d",0
+    32                                      
+    33                                      
+    34                                  ; our code starts here
+    35                                  segment code use32 class=code
+    36                                      start:
+    37                                          ; ...
+    38 00000000 68[24000000]                    push dword acces_mode
+    39 00000005 68[1A000000]                    push dword file_name
+    40 0000000A FF15[00000000]                  call [fopen]
+    41 00000010 83C408                          add esp,4*2
+    42                                          
+    43 00000013 68[00000000]                    push dword n
+    44 00000018 68[2A000000]                    push dword format
+    45 0000001D 68[26000000]                    push dword file_descriptor
+    46 00000022 FF15[00000000]                  call [fscanf]   
+    47                                          
+    48 00000028 8B0D[00000000]                  mov ecx,[n]
+    49                                          reading_loop:
+    50 0000002E 890D[12000000]                      mov [temp],ecx
+    51                                          
+    52 00000034 68[04000000]                        push dword num
+    53 00000039 68[2A000000]                        push dword format
+    54 0000003E FF35[26000000]                      push dword [file_descriptor]
+    55 00000044 FF15[00000000]                      call [fscanf]
+    56                                              
+    57                                             
+    58 0000004A 668B15[04000000]                    mov dx,[num]
+    59 00000051 66A1[06000000]                      mov ax,[num+2]
+    60                                              
+    61 00000057 C705[08000000]0000-                 mov dword [base_8],0
+    61 0000005F 0000               
+    62 00000061 66C705[10000000]01-                 mov word [p],1
+    62 00000069 00                 
+    63                                              conversion_loop:
+    64 0000006A 66F735[16000000]                        div word [eight]
+    65 00000071 668915[0E000000]                        mov [rem],dx
+    66 00000078 66A3[0C000000]                          mov [quo],ax
+    67                                                  
+    68 0000007E 66A1[0E000000]                          mov ax,[rem]
+    69 00000084 66F725[10000000]                        mul word [p]
+    70 0000008B 6652                                    push dx
+    71 0000008D 6650                                    push ax
+    72 0000008F 8F05[08000000]                          pop dword [base_8]
+    73                                                  
+    74 00000095 66A1[10000000]                          mov ax,[p]
+    75 0000009B 66F725[18000000]                        mul word [ten]
+    76 000000A2 66A3[10000000]                          mov [p],ax
+    77                                                  
+    78 000000A8 66BA0000                                mov dx,0
+    79 000000AC 66A1[0C000000]                          mov ax,[quo]
+    80                                                  
+    81 000000B2 66833D[0C000000]08                      cmp word [quo],8
+    82 000000BA 77AE                                ja conversion_loop
+    83                                              
+    84 000000BC FF35[08000000]                      push dword [base_8]
+    85 000000C2 68[2A000000]                        push dword format
+    86 000000C7 FF15[00000000]                      call [printf]
+    87 000000CD 83C408                              add esp,4*2
+    88                                              
+    89 000000D0 8B0D[12000000]                      mov ecx,[temp]
+    90 000000D6 49                                  dec ecx
+    91 000000D7 0F8551FFFFFF                    jnz reading_loop
+    92                                          ;loop reading_loop
+    93                                          
+    94                                          
+    95 000000DD FF35[26000000]                  push dword [file_descriptor]
+    96 000000E3 FF15[00000000]                  call [fclose]
+    97 000000E9 83C404                          add esp,4
+    98                                          
+    99                                          ; exit(0)
+   100 000000EC 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+   101 000000EE FF15[00000000]                  call    [exit]       ; call exit to terminate the program

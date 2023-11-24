@@ -1,0 +1,49 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit               ; tell nasm that exit exists even if we won't be defining it
+     8                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+     9                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    10                                  
+    11                                  ; our data is declared here (the variables needed by our program)
+    12                                  segment data use32 class=data
+    13                                      ; sum of even elements
+    14 00000000 010203040506070809-         s1 db 1,2,3,4,5,6,7,8,9,10
+    14 00000009 0A                 
+    15                                      lens1 equ $-s1
+    16 0000000A 02                          two db 2
+    17 0000000B 00                          evenSum db 0
+    18 0000000C 00                          oddSum db 0
+    19                                      
+    20                                  ; our code starts here
+    21                                  segment code use32 class=code
+    22                                      start:
+    23                                          ; ...
+    24 00000000 B300                            mov bl,0    ;even sum
+    25 00000002 B700                            mov bh,0    ;odd sum
+    26 00000004 B90A000000                      mov ecx,lens1   ;number of steps of loop - ECX; we need the number of steps to be the length
+    27 00000009 BE00000000                      mov esi,0
+    28 0000000E E324                            jecxz skip_loop
+    29                                          sum_loop:
+    30 00000010 8A86[00000000]                      mov al,[s1+esi] ;s1[esi]
+    31 00000016 B400                                mov ah,0 ;al->ax unsigned
+    32 00000018 F635[0A000000]                      div byte [two] ;al=ax/2 ah=ax%2
+    33 0000001E 80FC00                              cmp ah,0       ;check if even/odd
+    34 00000021 7508                                jne do_not_add ;jump over the add if its odd
+    35 00000023 029E[00000000]                          add bl,[s1+esi]
+    36 00000029 EB06                                    jmp over_odd
+    37                                              do_not_add:
+    38 0000002B 02BE[00000000]                          add bh,[s1+esi]
+    39                                              over_odd:
+    40 00000031 46                                  inc esi
+    41 00000032 E2DC                            loop sum_loop
+    42                                          skip_loop:
+    43 00000034 881D[0B000000]                  mov [evenSum],bl
+    44 0000003A 883D[0C000000]                  mov [oddSum],bh
+    45                                          
+    46                                          ; exit(0)
+    47 00000040 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    48 00000042 FF15[00000000]                  call    [exit]       ; call exit to terminate the program

@@ -1,0 +1,68 @@
+     1                                  bits 32 ; assembling for the 32 bits architecture
+     2                                  
+     3                                  ; declare the EntryPoint (a label defining the very first instruction of the program)
+     4                                  global start        
+     5                                  
+     6                                  ; declare external functions needed by our program
+     7                                  extern exit               ; tell nasm that exit exists even if we won't be defining it
+     8                                  import exit msvcrt.dll    ; exit is a function that ends the calling process. It is defined in msvcrt.dll
+     9                                                            ; msvcrt.dll contains exit, printf and all the other important C-runtime specific functions
+    10                                  
+    11                                  ; our data is declared here (the variables needed by our program)
+    12                                  segment data use32 class=data
+    13                                      ; sum of even elements
+    14 00000000 010203040506070809-         s1 db 1,2,3,4,5,6,7,8,9,10
+    14 00000009 0A                 
+    15                                      lens1 equ $-s1
+    16 0000000A 02                          two db 2
+    17 0000000B 0A                          ten db 10
+    18 0000000C 0000<rept>                  s2 times lens1 dw 0     ;add digit 7 to each element of s1 17,27,37...
+    19 00000020 00                          evenSum db 0
+    20 00000021 00                          oddSum db 0
+    21                                      
+    22                                  ; our code starts here
+    23                                  segment code use32 class=code
+    24                                      start:
+    25                                          ; construct s2 by adding digit 7 ata the end of elements from s1
+    26 00000000 B90A000000                      mov ecx, lens1
+    27 00000005 BE00000000                      mov esi,0   ;index for s1
+    28 0000000A BF00000000                      mov edi,0   ;index for s2
+    29 0000000F E31D                            jecxz end_loop
+    30                                          add_7:
+    31 00000011 8A86[00000000]                      mov al,[s1+esi]
+    32 00000017 F625[0B000000]                      mul byte [ten] ;ax=al*10
+    33 0000001D 6683C007                            add ax,7
+    34 00000021 668987[0C000000]                    mov [s2+edi],ax
+    35 00000028 46                                  inc esi
+    36 00000029 83C702                              add edi,2
+    37 0000002C E2E3                            loop add_7
+    38                                          end_loop:
+    39                                          
+    40                                          
+    41                                          
+    42                                          
+    43 0000002E B300                            mov bl,0    ;even sum
+    44 00000030 B700                            mov bh,0    ;odd sum
+    45 00000032 B90A000000                      mov ecx,lens1   ;number of steps of loop - ECX; we need the number of steps to be the length
+    46 00000037 BE00000000                      mov esi,0
+    47 0000003C E324                            jecxz skip_loop
+    48                                          sum_loop:
+    49 0000003E 8A86[00000000]                      mov al,[s1+esi] ;s1[esi]
+    50 00000044 B400                                mov ah,0 ;al->ax unsigned
+    51 00000046 F635[0A000000]                      div byte [two] ;al=ax/2 ah=ax%2
+    52 0000004C 80FC00                              cmp ah,0       ;check if even/odd
+    53 0000004F 7508                                jne do_not_add ;jump over the add if its odd
+    54 00000051 029E[00000000]                          add bl,[s1+esi]
+    55 00000057 EB06                                    jmp over_odd
+    56                                              do_not_add:
+    57 00000059 02BE[00000000]                          add bh,[s1+esi]
+    58                                              over_odd:
+    59 0000005F 46                                  inc esi
+    60 00000060 E2DC                            loop sum_loop
+    61                                          skip_loop:
+    62 00000062 881D[20000000]                  mov [evenSum],bl
+    63 00000068 883D[21000000]                  mov [oddSum],bh
+    64                                          
+    65                                          ; exit(0)
+    66 0000006E 6A00                            push    dword 0      ; push the parameter for exit onto the stack
+    67 00000070 FF15[00000000]                  call    [exit]       ; call exit to terminate the program
